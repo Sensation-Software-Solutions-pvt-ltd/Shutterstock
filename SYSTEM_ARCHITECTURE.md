@@ -83,6 +83,7 @@
 ## 2. Microservices Breakdown
 
 ### 2.1 Auth Service
+
 | Aspect | Detail |
 |---|---|
 | **Responsibility** | User registration, login, OAuth2/OIDC, role management (Contributor/Buyer/Admin) |
@@ -92,6 +93,7 @@
 | **Storage** | PostgreSQL `users` table with bcrypt-hashed passwords, `roles` table |
 
 ### 2.2 Upload / Ingestion Service
+
 | Aspect | Detail |
 |---|---|
 | **Responsibility** | Accepts image uploads from contributors, validates format/size, stores original, triggers processing pipeline |
@@ -102,6 +104,7 @@
 | **Storage** | S3 `/originals/{contributor_id}/{uuid}.{ext}` |
 
 ### 2.3 Image Processing Pipeline (Async Workers)
+
 | Aspect | Detail |
 |---|---|
 | **Responsibility** | Thumbnail generation, watermarking, AI tagging, embedding generation, metadata extraction |
@@ -118,6 +121,7 @@
 | **Embedding Generator** | Original image | 768-dim vector embedding | CLIP ViT-L/14 |
 
 ### 2.4 Search Service
+
 | Aspect | Detail |
 |---|---|
 | **Responsibility** | Keyword search, semantic search, faceted filtering, auto-complete |
@@ -128,6 +132,7 @@
 | **Latency Target** | p99 < 200ms |
 
 ### 2.5 Image Delivery Service
+
 | Aspect | Detail |
 |---|---|
 | **Responsibility** | Serve thumbnails/previews via CDN, generate time-limited signed URLs for paid downloads |
@@ -136,6 +141,7 @@
 | **Download Flow** | Verify license → generate signed S3 URL (5min TTL) → log download event → return URL |
 
 ### 2.6 Commerce / Licensing Service
+
 | Aspect | Detail |
 |---|---|
 | **Responsibility** | Cart, checkout, payment processing, license generation, subscription management |
@@ -146,12 +152,14 @@
 | **Revenue Split** | Configurable contributor payout (e.g., 25-40%), automated monthly payouts via Stripe Connect |
 
 ### 2.7 Contributor Portal Service
+
 | Aspect | Detail |
 |---|---|
 | **Responsibility** | Portfolio management, earnings dashboard, upload history, payout settings |
 | **Key APIs** | `GET /v1/contributor/portfolio`, `GET /v1/contributor/earnings`, `PUT /v1/contributor/payout-settings` |
 
 ### 2.8 Moderation Service
+
 | Aspect | Detail |
 |---|---|
 | **Responsibility** | Content review queue, NSFW filtering, copyright checks, manual review UI |
@@ -159,6 +167,7 @@
 | **Flow** | Auto-approve if NSFW < 0.1 & no duplicate hash → else queue for human review |
 
 ### 2.9 Analytics / Recommendation Service
+
 | Aspect | Detail |
 |---|---|
 | **Responsibility** | Track views, downloads, search patterns; generate recommendations |
@@ -445,50 +454,146 @@ Client → CDN (cache hit: 85%+) → API Gateway → Redis (cache hit: 60%) → 
 
 ---
 
-## 7. Estimated Infrastructure (5M Images)
+## 7. Estimated Infrastructure (5M Images) — Phased Approach
 
-### 7.1 Storage Estimates
+> **Key Insight:** You don't need $13K/mo on day one. Start lean, scale with revenue.
+
+### 7.1 Storage Estimates (constant across phases)
 
 | Asset Type | Per Image | 5M Images | Storage Class |
 |---|---|---|---|
-| Original (avg 15MB) | 15 MB | **75 TB** | S3 Standard-IA |
-| Thumbnails (3 sizes) | 200 KB | **1 TB** | S3 Standard |
-| Watermarked preview | 300 KB | **1.5 TB** | S3 Standard |
-| **Total S3** | | **~78 TB** | |
+| Original (avg 15MB) | 15 MB | **75 TB** | S3 Intelligent-Tiering |
+| Thumbnails (3 sizes, WebP) | 120 KB | **600 GB** | S3 Standard |
+| Watermarked preview | 200 KB | **1 TB** | S3 Standard |
+| **Total S3** | | **~77 TB** | |
 
-| Database | Size Estimate | Instance |
+> *Storage cost grows linearly with content. At Phase 1 with 100K images, S3 is only ~1.5 TB (~$35/mo).*
+
+---
+
+### 7.2 🟢 Phase 1 — MVP / Launch (0–500K images, <1K RPM)
+
+**Philosophy:** Managed services, serverless where possible, single-region, no K8s overhead.
+
+| Component | Choice | Monthly Cost |
 |---|---|---|
-| PostgreSQL (metadata) | ~50 GB (rows) + 30 GB (pgvector) | r6g.2xlarge (64GB RAM) + 2 read replicas |
-| OpenSearch (index) | ~100 GB | 3x r6g.xlarge.search (data) + 3x master |
-| Qdrant (vectors) | ~25 GB (5M × 768 × 4B + overhead) | 3x 16GB RAM nodes |
-| Redis (cache) | ~10 GB | r6g.large cluster (3 shards) |
+| **Compute** | 2× t4g.medium (ARM, burstable) behind ALB — runs all API services as a monolith or 2-3 merged services | ~$60 |
+| **Database** | RDS PostgreSQL db.t4g.medium (2c/4GB) + pgvector — single instance, no replicas | ~$65 |
+| **Search** | OpenSearch t3.medium.search (single-node dev) | ~$90 |
+| **Vector Search** | pgvector inside PostgreSQL (skip Qdrant entirely at this scale) | $0 (included in RDS) |
+| **AI Processing** | AWS Lambda + **API-based inference** (Google Vision API / OpenAI CLIP API) — pay per image, no GPU instances | ~$50 (at 10K images/mo) |
+| **Thumbnails/Watermarks** | AWS Lambda (Python + Pillow) — triggered by S3 events | ~$15 |
+| **Object Storage** | S3 (~1.5 TB at 100K images) | ~$35 |
+| **CDN** | CloudFront (1TB egress) with free tier | ~$85 |
+| **Cache** | ElastiCache Redis t4g.micro (single node) | ~$15 |
+| **Queue** | SQS (free tier covers most usage) | ~$5 |
+| **Payments** | Stripe (no infra cost, 2.9% + $0.30 per txn) | $0 infra |
+| **Monitoring** | CloudWatch (basic) + free-tier Grafana Cloud | ~$20 |
+| **DNS + Misc** | Route53, ACM, Secrets Manager | ~$15 |
+| **CI/CD** | GitHub Actions (free tier) | $0 |
+| | | |
+| **Total Phase 1** | | **~$455/mo** |
 
-### 7.2 Compute Estimates
+**Key trade-offs at Phase 1:**
 
-| Service | Instance / Config | Count | Purpose |
+- ❌ No Kubernetes (Docker Compose or ECS Fargate)
+- ❌ No dedicated vector DB (pgvector handles 500K vectors fine)
+- ❌ No GPU instances (use cloud Vision APIs at ~$1.50/1K images)
+- ❌ Single-AZ database (acceptable for MVP)
+- ✅ Still has: CDN, async processing, AI tagging, search, watermarking
+- ✅ Same API contract — scale without breaking clients
+
+**⬆️ Graduate to Phase 2 when:** >500K images OR >1K RPM OR search p99 >500ms
+
+---
+
+### 7.3 🟡 Phase 2 — Growth (500K–2M images, 1K–5K RPM)
+
+**Philosophy:** Introduce dedicated services, read replicas, and managed K8s.
+
+| Component | Choice | Monthly Cost |
+|---|---|---|
+| **Compute** | EKS (3× t4g.large nodes) — decompose into microservices | ~$350 |
+| **Database** | RDS PostgreSQL db.r6g.large (2c/16GB) + 1 read replica + PgBouncer | ~$500 |
+| **Search** | OpenSearch 3× r6g.large.search (1 master + 2 data) | ~$850 |
+| **Vector Search** | Qdrant Cloud (managed, 1M vectors, 8GB) | ~$150 |
+| **AI Processing** | 1× g4dn.xlarge Spot Instance (avg 60% savings) — self-hosted CLIP | ~$250 |
+| **Thumbnails/Watermarks** | Lambda (scales automatically) | ~$40 |
+| **Object Storage** | S3 (~15 TB at 1M images) with Intelligent-Tiering | ~$300 |
+| **CDN** | CloudFront (5TB egress) | ~$425 |
+| **Cache** | ElastiCache Redis r6g.large (1 primary + 1 replica) | ~$250 |
+| **Queue** | SQS + SNS | ~$30 |
+| **Monitoring** | Prometheus + Grafana (self-hosted on K8s) + CloudWatch | ~$50 |
+| **DNS + NAT + Misc** | Route53, NAT Gateway, Secrets Manager | ~$150 |
+| | | |
+| **Total Phase 2** | | **~$3,345/mo** |
+
+**What changed from Phase 1:**
+
+- ✅ Kubernetes (EKS) for service orchestration
+- ✅ Dedicated Qdrant for semantic search quality
+- ✅ Self-hosted CLIP on Spot GPU (much cheaper than API-based)
+- ✅ Read replica for DB read scaling
+- ✅ Multi-node OpenSearch for production search quality
+- ✅ Still using Spot instances and ARM wherever possible
+
+**⬆️ Graduate to Phase 3 when:** >2M images OR >5K RPM OR need multi-region DR
+
+---
+
+### 7.4 🔴 Phase 3 — Full Scale (2M–10M+ images, 5K–20K RPM)
+
+**Philosophy:** Multi-AZ, full redundancy, dedicated everything, DR-ready.
+
+| Component | Choice | Monthly Cost |
+|---|---|---|
+| **Compute** | EKS (6× c6g.xlarge nodes, multi-AZ) + HPA | ~$1,200 |
+| **Database** | RDS PostgreSQL r6g.2xlarge + 2 read replicas + Multi-AZ | ~$1,800 |
+| **Search** | OpenSearch 3× r6g.xlarge.search (data) + 3× master | ~$2,400 |
+| **Vector Search** | Qdrant self-hosted (3× 16GB nodes, sharded) | ~$600 |
+| **AI Processing** | 2× g4dn.xlarge Spot + 1× on-demand fallback | ~$800 |
+| **Thumbnails/Watermarks** | Lambda + Step Functions orchestration | ~$80 |
+| **Object Storage** | S3 (~78 TB) with Intelligent-Tiering + CRR for originals | ~$1,400 |
+| **CDN** | CloudFront (10TB+ egress, custom pricing) | ~$850 |
+| **Cache** | ElastiCache Redis cluster (3 shards, replicas) | ~$500 |
+| **Queue** | SQS + SNS (or Kafka if event streaming needed) | ~$100 |
+| **Monitoring** | Full observability stack (Prometheus, Grafana, Loki, Jaeger) | ~$200 |
+| **DR / Misc** | Cross-region replication, NAT, Route53, WAF | ~$600 |
+| | | |
+| **Total Phase 3** | | **~$10,530/mo** |
+
+> *With Reserved Instances (1-year) on steady-state components (RDS, OpenSearch, base K8s nodes), this drops to **~$7,500/mo** — a 29% savings.*
+
+---
+
+### 7.5 Phase Comparison Summary
+
+```
+ Monthly Cost
+ ────────────
+ $10,530 ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┬─── Phase 3 (Full Scale)
+                                                         │    ($7,500 with RIs)
+                                                         │
+  $3,345 ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┬──────────────────┘    Phase 2 (Growth)
+                                      │
+    $455 ─ ─ ─ ─ ─ ─ ┬───────────────┘                       Phase 1 (MVP)
+                      │
+ ─────┼───────────────┼───────────────┼──────────────────┼── Images
+      0           500K              2M                 5M+
+```
+
+| Metric | Phase 1 | Phase 2 | Phase 3 |
 |---|---|---|---|
-| API Services (K8s) | c6g.xlarge (4c/8GB) | 6-12 pods | Request handling |
-| Processing Workers | g4dn.xlarge (GPU) | 2-8 (auto-scale) | AI tagging, embeddings |
-| Processing Workers (CPU) | c6g.2xlarge | 4-10 (auto-scale) | Thumbnails, watermarks |
-| Kubernetes Control | m6g.large | 3 nodes | EKS management |
-| Load Balancer | ALB | 1 | Ingress |
-
-### 7.3 Monthly Cost Estimate (AWS, us-east-1)
-
-| Component | Monthly Cost |
-|---|---|
-| S3 Storage (78TB mixed) | ~$1,600 |
-| S3 Requests + Transfer | ~$800 |
-| CloudFront (10TB egress) | ~$850 |
-| EKS + EC2 (API + Workers) | ~$3,500 |
-| GPU Instances (on-demand avg) | ~$1,200 |
-| RDS PostgreSQL (primary + 2 replicas) | ~$1,800 |
-| OpenSearch (6 nodes) | ~$2,400 |
-| Qdrant (3 nodes on EC2) | ~$600 |
-| ElastiCache Redis | ~$500 |
-| SQS / SNS | ~$100 |
-| Miscellaneous (NAT, DNS, secrets) | ~$400 |
-| **Total Estimated** | **~$13,750/mo** |
+| **Monthly Cost** | **~$455** | **~$3,345** | **~$10,530** (~$7,500 w/ RIs) |
+| **Images** | 0–500K | 500K–2M | 2M–10M+ |
+| **RPM** | <1K | 1K–5K | 5K–20K |
+| **Search Latency (p99)** | <500ms | <300ms | <200ms |
+| **Vector Search** | pgvector | Qdrant managed | Qdrant self-hosted (sharded) |
+| **AI Inference** | Cloud APIs | Spot GPU | Spot + On-demand GPU |
+| **Orchestration** | Docker Compose / ECS | EKS (3 nodes) | EKS (6+ nodes, multi-AZ) |
+| **DB Redundancy** | Single instance | 1 read replica | Multi-AZ + 2 replicas |
+| **DR** | Backups only | Backups + snapshot restore | Warm standby + DNS failover |
+| **Time to set up** | 1–2 weeks | 2–4 weeks | 4–8 weeks |
 
 ---
 
@@ -554,7 +659,7 @@ Upload Event
 | Strategy | Savings |
 |---|---|
 | **S3 Intelligent-Tiering** for originals | Auto-moves cold images to IA/Glacier: **~40% on storage** |
-| **Lifecycle policies** | Move images not downloaded in 90d to S3-IA, 365d to Glacier | 
+| **Lifecycle policies** | Move images not downloaded in 90d to S3-IA, 365d to Glacier |
 | **WebP/AVIF thumbnails** | 30-50% smaller than JPEG: saves CDN egress + storage |
 | **Deduplication** | pHash-based dedup prevents storing duplicate content |
 
