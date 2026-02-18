@@ -1,6 +1,6 @@
-# Shutterstock-like Image Marketplace — System Architecture
+# Shutterstock-like Image Marketplace — System Architecture (GCP Edition)
 
-> **Version:** 1.1 · **Date:** 2026-02-18 · **Scale Target:** 5M+ images, 10K RPM search
+> **Version:** 1.2 · **Date:** 2026-02-18 · **Scale Target:** 5M+ images, 10K RPM search · **Stack:** Google Cloud Platform (GCP)
 
 ---
 
@@ -8,60 +8,60 @@
 
 ### [Step 1: Image Ingestion (Batch Migration)](./BATCH_INGESTION_WORKFLOW.md)
 
-* **Goal:** Processing 5M+ local images into Azure Blob Storage.
-* **Key Tech:** Python, CLIP (AI Tagging), pgvector.
+* **Goal:** Processing 5M+ local images into **Google Cloud Storage (GCS)**.
+* **Key Tech:** Python, Vertex AI (Vision), Cloud SQL (pgvector).
 
-### [Step 2: Search Engine (Azure AI Search Integration)](./AZURE_AI_SEARCH_INTEGRATION.md)
+### [Step 2: Search Engine (Vertex AI Search Integration)](./VERTEX_AI_SEARCH_INTEGRATION.md)
 
 * **Goal:** Enabling conceptual "Semantic" search + Keyword search.
-* **Key Tech:** Azure AI Search, Hybrid RRF.
+* **Key Tech:** Vertex AI Search, Vector Search (Matching Engine).
 
 ### [Step 3: Triple-Portal Website Development](./WEBSITE_DEVELOPMENT.md)
 
-* **Goal:** Launching the **Public**, **Contributor**, and **Admin** portals.
-* **Key Tech:** Next.js, Stripe, Role-Based Access Control (RBAC).
+* **Goal:** Launching the **Public**, **Contributor**, and **Admin** portals on **Cloud Run**.
+* **Key Tech:** Next.js, Stripe, Google Cloud Identity Platform.
 
 ---
 
-## 1. High-Level Integrated Architecture
+## 1. High-Level Integrated Architecture (GCP)
 
 ```
                           ┌─────────────────────────────────────────────┐
-                          │         CDN (Azure Front Door / Akamai)     │
+                          │         Google Cloud CDN / Load Balancer    │
                           └────────────────────┬────────────────────────┘
                                                │
                ┌───────────────────────────────┼──────────────────────────────┐
                ▼                               ▼                              ▼
     ┌────────────────────┐          ┌────────────────────┐          ┌────────────────────┐
     │    Public Site     │          │ Contributor Panel  │          │    Admin Panel     │
-    │  (Search/Purchase) │          │  (Upload/Earnings) │          │ (Moderate/Payouts) │
+    │  (Next.js on Run)  │          │  (Next.js on Run)  │          │  (Next.js on Run)  │
     └──────────┬─────────┘          └──────────┬─────────┘          └──────────┬─────────┘
                │                               │                               │
                └─────────────────┬─────────────┴───────────────────────────────┘
                                  │
                           ┌──────▼──────────────────────────────────────┐
-                          │           Unified Backend API Layer         │
+                          │         Unified Backend (Cloud Run)         │
                           │   (JWT Auth, RBAC, Rate Limiting, Logic)    │
                           └──┬──────┬──────┬──────┬──────┬──────┬───────┘
                              │      │      │      │      │      │
               ┌──────────────┘      │      │      │      │      └──────────────┐
               ▼                     ▼      │      ▼      ▼                     ▼
    ┌──────────────────┐  ┌─────────────┐  │ ┌─────────────┐  ┌──────────────────┐
-   │  Auth Service    │  │ Background  │  │ │ Azure AI    │  │ Payment Gateway  │
-   │  (Azure AD/Auth0)│  │ Processing  │  │ │ Search      │  │ (Stripe)         │
+   │Identity Platform │  │ Cloud Pub/Sub│  │ │ Vertex AI    │  │ Payment Gateway  │
+   │ (Firebase Auth)  │  │ (Messaging)  │  │ │ Search      │  │ (Stripe)         │
    └──────────────────┘  └──────┬──────┘  │ └─────────────┘  └──────────────────┘
                                 │         │
                                 ▼         │          ┌──────────────────────────┐
-                   ┌────────────────────┐ │          │   Azure Blob Storage     │
+                   ┌────────────────────┐ │          │   Cloud Storage (GCS)    │
                    │  Image Processor   │ │          │                          │
-                   │  (AI, Thumb, WM)   │ │          │  /originals  (private)   │
+                   │ (Cloud Functions)  │ │          │  /originals  (private)   │
                    └────────┬───────────┘ │          │  /thumbnails (public)    │
                             │             │          │  /watermarked (public)   │
                             ▼             │          └──────────────────────────┘
                    ┌────────────────────┐ │
-                   │  Service Bus       │ │          ┌──────────────────────────┐
-                   │  (Queue / Topics)  │◄┘          │  Primary Metadata DB     │
-                   └────────────────────┘            │  (PostgreSQL)            │
+                   │  Vertex AI Vision  │ │          ┌──────────────────────────┐
+                   │  (Tagging/Embed)   │◄┘          │   Cloud SQL (Postgres)   │
+                   └────────────────────┘            │   (Primary Metadata)     │
                                                      └──────────────────────────┘
 ```
 
@@ -71,34 +71,33 @@
 
 | Pillar | Public (Buyer) | Contributor (Artist) | Admin (Staff) |
 | :--- | :--- | :--- | :--- |
-| **Search** | Semantic & Faceted | Personal Portfolio Search | Flagged Content Search |
-| **Commerce** | Cart & Subscriptions | Earnings & Tax Info | Payout Batches & Pricing |
-| **Content** | High-res Downloads | AI-Assisted Uploads | Moderation & Categorization |
-| **Access** | Guest / Account | RBAC: Contributor Role | RBAC: Admin Role |
+| **Search** | Semantic (Vertex AI) | Portfolio Management | Moderation Queue |
+| **Commerce** | Stripe Checkout | Stripe Connect Payouts | Platform Revenue Ops |
+| **Content** | GCS Signed URLs | Direct GCS Upload (V4) | Content Governance |
+| **Access** | Identity Platform | RBAC: Contributor | RBAC: Admin |
 
 ---
 
-## 3. Data Infrastructure (Unified)
+## 3. Data Infrastructure (GCP)
 
-### 3.1 Metadata Storage (PostgreSQL)
+### 3.1 Metadata Storage (Cloud SQL for PostgreSQL)
 
-The source of truth for all relational data: users, licenses, image metadata, and audit logs.
+The source of truth for all relational data. Uses `pgvector` for local vector operations and Vertex AI Matching Engine for large-scale similarity.
 
-### 3.2 Search Index (Azure AI Search)
+### 3.2 Search Index (Vertex AI Search)
 
-The high-performance read-model for discovery. Synchronized from PostgreSQL and Blob metadata.
+The high-performance discovery engine. Uses **Hybrid Search** (combining keyword and vector search) for ultra-relevant results.
 
-### 3.3 Object Storage (Azure Blob)
+### 3.3 Object Storage (Google Cloud Storage)
 
-Stores millions of files across tiers:
-
-* **Hot Tier:** Watermarked previews and thumbnails.
-* **Cool/Archive Tier:** Original high-res RAW/TIFF files.
+* **Standard Class:** Watermarked previews and thumbnails for fast delivery.
+* **Coldline/Archive:** Original raw files to optimize costs.
 
 ---
 
-## 4. Scalability & Security
+## 4. Scalability & Security (GCP)
 
-* **RBAC:** Strict separation of duties. Admin APIs are inaccessible to Contributor/Public tokens.
-* **Queueing:** Azure Service Bus handles all long-running tasks (e.g., massive 5M image migrations).
-* **Elasticity:** Frontend portals are statically generated at the edge (SSG) for instant global load times.
+* **Cloud Run:** Serverless scaling of all three portals and the backend API.
+* **Cloud IAM + RBAC:** Strict permission boundaries using Google Cloud Identity.
+* **Cloud Armor:** Edge security to protect against DDoS and OWASP top 10.
+* **VPC Service Controls:** Ensuring data exfiltration protection between SQL and GCS.
