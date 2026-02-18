@@ -9,6 +9,7 @@
 1. [High-Level System Architecture](#1-high-level-system-architecture)
 2. [Microservices Breakdown](#2-microservices-breakdown)
 3. [Data Flow — Image Ingestion](#3-data-flow--image-ingestion)
+    - [Initial Migration: Batch Model (Phase 0)](./BATCH_INGESTION_WORKFLOW.md)
 4. [Data Flow — Search Request](#4-data-flow--search-request)
 5. [Recommended Tech Stack](#5-recommended-tech-stack)
 6. [Scaling Strategy](#6-scaling-strategy)
@@ -177,7 +178,16 @@
 
 ## 3. Data Flow — Image Ingestion
 
-```
+### 3.0 Initial Migration: Batch Model (Phase 0)
+
+For the initial ingestion of 5M+ existing images, we use a **controlled batch migration pipeline** rather than the live event-driven architecture. This is optimized for high-throughput and "resume-on-failure" reliability.
+
+👉 **[View Full Batch Ingestion Workflow Details](./BATCH_INGESTION_WORKFLOW.md)**
+
+---
+
+### 3.1 Live Contributor Ingestion (Event-Driven)
+
 Contributor                   System
     │
     ├──1─► POST /v1/images/upload (metadata + auth)
@@ -234,6 +244,7 @@ Contributor                   System
     │            • Invalidate CDN cache for contributor portfolio
     │
     ◄──10── Webhook/SSE notification: "Image processed successfully"
+
 ```
 
 ### PostgreSQL Schema (Core Tables)
