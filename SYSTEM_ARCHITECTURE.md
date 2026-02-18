@@ -21,6 +21,11 @@
 * **Goal:** Launching the **Public**, **Contributor**, and **Admin** portals on **Cloud Run**.
 * **Key Tech:** Next.js, Stripe, Google Cloud Identity Platform.
 
+### [Project Roadmap: Development Phases](./DEVELOPMENT_ROADMAP.md)
+
+* **Phased Build:** 6 phases from Foundation/Migration to Global Scaling.
+* **Priority:** Search and Data integrity before frontend expansion.
+
 ---
 
 ## 1. High-Level Integrated Architecture (GCP)
