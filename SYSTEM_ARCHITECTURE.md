@@ -11,6 +11,7 @@
 3. [Data Flow — Image Ingestion](#3-data-flow--image-ingestion)
     - [Initial Migration: Batch Model (Phase 0)](./BATCH_INGESTION_WORKFLOW.md)
 4. [Data Flow — Search Request](#4-data-flow--search-request)
+    - [Search Engine: Azure AI Search](./AZURE_AI_SEARCH_INTEGRATION.md)
 5. [Recommended Tech Stack](#5-recommended-tech-stack)
 6. [Scaling Strategy](#6-scaling-strategy)
 7. [Estimated Infrastructure (5M Images)](#7-estimated-infrastructure-5m-images)
@@ -329,7 +330,16 @@ CREATE INDEX idx_tags_tag ON image_tags(tag);
 
 ## 4. Data Flow — Search Request
 
-```
+### 4.0 Search Engine Implementation: Azure AI Search
+
+While the core architecture supports any vector-capable search engine, we leverage **Azure AI Search** for its managed HNSW implementation, hybrid search (RRF), and seamless integration with our ingestion pipeline.
+
+👉 **[View Full Azure AI Search Integration Details](./AZURE_AI_SEARCH_INTEGRATION.md)**
+
+---
+
+### 4.1 Search Execution Flow
+
 Buyer / Client                          System
     │
     ├──1─► GET /v1/search?q=sunset+over+ocean&category=nature
@@ -395,6 +405,7 @@ Buyer / Client                          System
     │              }
     │
     ◄──5─── Render results in UI
+
 ```
 
 ---
@@ -440,7 +451,9 @@ Buyer / Client                          System
 ### 6.2 Read Path Optimization
 
 ```
+
 Client → CDN (cache hit: 85%+) → API Gateway → Redis (cache hit: 60%) → Search Service → DB
+
 ```
 
 - **CDN caching**: Thumbnails/watermarks cached at edge (TTL: 24h)
@@ -580,6 +593,7 @@ Client → CDN (cache hit: 85%+) → API Gateway → Redis (cache hit: 60%) → 
 ### 7.5 Phase Comparison Summary
 
 ```
+
  Monthly Cost
  ────────────
  $10,530 ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┬─── Phase 3 (Full Scale)
@@ -591,6 +605,7 @@ Client → CDN (cache hit: 85%+) → API Gateway → Redis (cache hit: 60%) → 
                       │
  ─────┼───────────────┼───────────────┼──────────────────┼── Images
       0           500K              2M                 5M+
+
 ```
 
 | Metric | Phase 1 | Phase 2 | Phase 3 |
@@ -633,6 +648,7 @@ Client → CDN (cache hit: 85%+) → API Gateway → Redis (cache hit: 60%) → 
 ### 8.3 Processing Pipeline Resilience
 
 ```
+
 Upload Event
     │
     ├── SQS Dead Letter Queue (DLQ)
@@ -651,6 +667,7 @@ Upload Event
         • If any step fails after retries → mark image as "processing_failed"
         • Contributor notified, can retry upload
         • Admin dashboard shows failed processing queue
+
 ```
 
 ### 8.4 Disaster Recovery
