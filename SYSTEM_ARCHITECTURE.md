@@ -30,7 +30,7 @@
 
 ## 1. High-Level Integrated Architecture (GCP)
 
-```
+```text
                           ┌─────────────────────────────────────────────┐
                           │         Google Cloud CDN / Load Balancer    │
                           └────────────────────┬────────────────────────┘

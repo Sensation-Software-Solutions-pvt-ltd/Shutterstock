@@ -37,15 +37,20 @@ This roadmap breaks down the build into six logical phases, prioritizing core in
 
 *Goal: Launch the primary buyer-facing website and start generating revenue.*
 
-* **Website Core:** Next.js application on Cloud Run + Cloud CDN.
-* **Search & Discovery:**
-  * Infinite scroll search results grid.
-  * Faceted filtering (Orientation, Color, Category).
-  * Image Detail Page (PDP) with watermarked previews.
-* **Payments Integration:**
-  * Stripe Checkout for single-image licenses.
-  * Subscription plan implementation.
-* **Secure Downloads:** JWT-protected signed URL generation for purchasing high-res originals.
+* **Premium Web Application (Next.js):**
+  * **Homepage:** Trending search terms, curated collections (e.g., "Deep Space"), and top categories.
+  * **Search Results Page:** Masonry-style fluid grid, infinite scroll, and visual-first design.
+  * **Product Detail Page (PDP):** Large watermarked preview, EXIF data display, license type selection (Standard vs. Enhanced), and "Similar Images" concept-matching.
+* **Search & Facet Implementation:**
+  * Integration with Phase 2's Vertex AI Search.
+  * Dynamic facets: Orientation (Horizontal/Vertical), Color Palette (HEX-based), and Contributor.
+* **Commerce Architecture (Stripe):**
+  * **Stripe Checkout:** Secure session management for card payments.
+  * **Subscriptions:** Implementation of monthly/yearly "Download Credit" plans.
+  * **Post-Purchase Flow:** Automated licensing PDF generation and transaction emails.
+* **The Secure Download Gateway:**
+  * Implementation of an "Access Gateway" that verifies license ownership.
+  * Triggering **GCS V4 Signed URLs** with a 15-minute expiration only for authorized high-res original files.
 
 ---
 
@@ -53,12 +58,18 @@ This roadmap breaks down the build into six logical phases, prioritizing core in
 
 *Goal: Enable photographers to join the platform and submit new content.*
 
-* **Contributor Portal:** Dedicated protected area for artists.
-* **Secure Uploads:** Implementation of GCS V4 Signed URLs for direct binary uploads.
-* **Submission Workflow:**
-  * Auto-tagging preview UI.
-  * Metadata editing station.
-* **Earnings Dashboard:** Stripe Connect integration for payout onboarding and balance tracking.
+* **Contributor Onboarding:**
+  * Registration flow with legal identity verification.
+  * **Stripe Connect Integration:** Linking bank accounts for automated payouts (Express or Custom).
+* **High-Volume Asset Submission:**
+  * **Direct-to-GCS Uploader:** Client-side multi-file uploader using Signed URLs to bypass server bottlenecks.
+  * **AI Tagging Station:** Real-time preview of Vertex AI suggested tags; contributors can add/modify/delete tags before final submission.
+* **Portfolio Management Dashboard:**
+  * **Asset Control:** Manage "Live" vs "Pending Review" vs "Rejected" status.
+  * **Bulk Edit:** Update prices or metadata for multiple items at once.
+* **Earnings & Analytics:**
+  * Graphical breakdown of revenue per month/image.
+  * Real-time payout balance and automated monthly withdrawal settings.
 
 ---
 
@@ -66,10 +77,18 @@ This roadmap breaks down the build into six logical phases, prioritizing core in
 
 *Goal: Provide the tools required to moderate content and manage the platform.*
 
-* **Moderation Queue:** UI for Admins to Approve/Reject submissions.
-* **User Management:** Audit logs, banning, and role escalation.
-* **Global Metadata:** Direct control over categories, trending tags, and homepage collections.
-* **Revenue Dashboard:** Platform-wide sales analytics and payout batch processing.
+* **Content Moderation Suite:**
+  * **Smart Review Queue:** Side-by-side view showing the submitted image + AI-suggested metadata.
+  * **Decision Workflow:** Approve, Reject (with reason codes: "Focus", "Noise", "Copyright"), or "Request Revision".
+* **Platform Configuration:**
+  * **Pricing Engine:** Global control over platform margins and subscription prices.
+  * **Collection Management:** Curate homepage carousels, "Staff Picks", and Seasonal topics.
+  * **System Messaging:** Global banners for site maintenance or contributor announcements.
+* **Advanced User Governance:**
+  * Cross-portal management: Audit logs and user status controls (Banning/Suspend/Elevate).
+  * Role Management: Management of platform access levels (Moderator vs. Super Admin).
+* **Business Intelligence (BI):**
+  * Dashboards integrated with **BigQuery** for high-level sales data, top-performing contributors, and churn analytics.
 
 ---
 
