@@ -4,6 +4,25 @@ This document provides a granular breakdown of the platform's evolution, focusin
 
 ---
 
+## 🛠️ The Technology Stack (GCP-Native)
+
+The platform is engineered for high performance, low maintenance, and infinite scale using a modern cloud-native stack.
+
+| Layer | Technology | Rationale |
+| :--- | :--- | :--- |
+| **Frontend** | **Next.js 14+** | Optimized for SEO (SSG) and user experience (App Router). |
+| **Backend API** | **Python (FastAPI) or Go** | High-performance asynchronous processing for 5M+ assets. |
+| **Core Compute** | **Google Cloud Run** | Serverless scaling; only pay for what is used. |
+| **Primary Database**| **Cloud SQL (PostgreSQL)** | Relational metadata with `pgvector` for local vector operations. |
+| **Search Engine** | **Vertex AI Vector Search** | Industry-leading latency for multi-million vector similarity. |
+| **AI/Vision** | **Vertex AI Vision** | Automated tagging, labeling, and NSFW content safety. |
+| **Object Storage** | **Google Cloud Storage (GCS)** | Multi-tier storage (Standard/Archive) to optimize long-term costs. |
+| **Payments** | **Stripe (Checkout & Connect)** | Frictionless global commerce and compliant contributor payouts. |
+| **Auth** | **Firebase Auth / Identity Platform** | Secure, multi-tenant RBAC (Buyer vs. Contributor vs. Admin). |
+| **CDN/WAF** | **Cloud Load Balancing & Armor** | Global edge acceleration and enterprise-grade DDoS protection. |
+
+---
+
 ## 🏗️ Phase 1: Data Foundation & Intelligent Ingestion
 
 *Goal: Convert raw image data into a structured, searchable, and secure asset library.*
