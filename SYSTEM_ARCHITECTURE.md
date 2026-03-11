@@ -106,3 +106,13 @@ The high-performance discovery engine. Uses **Hybrid Search** (combining keyword
 * **Cloud IAM + RBAC:** Strict permission boundaries using Google Cloud Identity.
 * **Cloud Armor:** Edge security to protect against DDoS and OWASP top 10.
 * **VPC Service Controls:** Ensuring data exfiltration protection between SQL and GCS.
+
+---
+
+## 5. Economic Value & ROI
+
+This custom architecture is designed to disrupt the high cost of traditional enterprise DAM platforms (Adobe AEM Assets, Bynder, Orange Logic, etc.), which typically range from **$6,000 to $50,000+/year** in licensing alone.
+
+* **One-Time Investment:** $25,000 flat build-out.
+* **Infrastructure:** Only pay-as-you-go Google Cloud costs.
+* **Long-Term Scaling:** No per-user or per-asset licensing fees; costs grow strictly with business volume.

@@ -170,6 +170,19 @@ The platform is engineered for high performance, low maintenance, and infinite s
 
 ---
 
+## 💰 Cost Comparison: Enterprise vs. Custom
+
+Building a custom, GCP-native platform offers significant long-term savings compared to off-the-shelf enterprise Digital Asset Management (DAM) solutions.
+
+| Platform Type | Licensing / Upfront Cost | Ongoing Annual Costs |
+| :--- | :--- | :--- |
+| **Enterprise DAM** (Adobe AEM, Bynder, Orange Logic) | $0 (Initial) | $6,000 – $50,000+ / Year |
+| **Custom GCP Platform** | **$25,000 (One-time Investment)** | Pay-as-you-go GCP Utilities |
+
+By investing in a custom solution, the platform transitions from an ongoing operational expense (OpEx) to a one-time capital investment, with infrastructure costs that scale linearly only with actual usage.
+
+---
+
 ## 💎 The Technical Moat (Why Us?)
 
 * **Vertex AI Superiority:** Most competitors use simple keyword tags. Our platform "understands" the visual composition and mood.
