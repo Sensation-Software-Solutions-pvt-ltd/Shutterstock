@@ -59,9 +59,19 @@ If the application is initially restricted to internal users for testing and a s
 
 ---
 
+## 💎 The "Hybrid" Advantage (Maximum Savings)
+
+If you choose to host the 150TB image library on a separate storage server while keeping the application in GCP:
+
+* **Eliminate Egress Fees:** You bypass the high cost of cloud data transfer.
+* **Monthly Savings:** Reduces the "ESTIMATED MONTHLY TOTAL" by an additional **$500 – $1,500** depending on traffic.
+* **Total Monthly OpEx:** Could drop to as low as **~$1,500 – 2,500** for a full 150TB enterprise catalog.
+
+---
+
 ## 📉 Long-Term Economic Moat
 
-By building this on custom GCP infrastructure rather than subscribing to a SaaS Digital Asset Management (DAM) tool (e.g., Bynder or Adobe AEM), you transition from an **ongoing subscription tax** to a **linear utility cost**. 
+By building this on custom GCP infrastructure rather than subscribing to a SaaS Digital Asset Management (DAM) tool (e.g., Bynder or Adobe AEM), you transition from an **ongoing subscription tax** to a **linear utility cost**.
 
-*   **Custom Build:** Costs scale with your revenue/assets.
-*   **SaaS License:** Costs scale with user seats and arbitrary "platform tiers" (typically $10k–$50k/year).
+* **Custom Build:** Costs scale with your revenue/assets.
+* **SaaS License:** Costs scale with user seats and arbitrary "platform tiers" (typically $10k–$50k/year).

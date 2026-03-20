@@ -104,6 +104,14 @@ To balance performance with costs, we use a **Hot/Cold Storage** and **Just-in-T
   * **Edge Caching:** **Cloud CDN** caches these processed variants at the edge, ensuring sub-100ms delivery for recurring requests.
   * **Benefit:** Dramatically reduces required storage capacity and ensures the fastest user experience globally.
 
+### 3.4 Hybrid Infrastructure (GCP Compute + Remote Storage)
+
+For maximum cost efficiency, the platform supports a **Hybrid Storage Model**:
+* **GCP Core:** The application logic (Cloud Run), Database (Cloud SQL), and AI Search (Vertex AI) remain in Google Cloud for stability and performance.
+* **Remote Asset Store:** The massive 150TB image library is hosted on a separate high-capacity storage server (e.g., a dedicated local server or a specialized storage provider like Hetzner/OVH).
+* **DNS Linking:** A dedicated sub-domain (e.g., `cdn.yourplatform.com`) is linked to the remote server's IP via DNS.
+* **Outcome:** This completely eliminates GCP's "Cloud Egress" fees (which can be expensive at 150TB scale) while keeping the intelligence and reliability of Google's cloud services.
+
 ---
 
 ## 4. Scalability & Security (GCP)
