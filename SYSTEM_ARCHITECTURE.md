@@ -93,10 +93,16 @@ The source of truth for all relational data. Uses `pgvector` for local vector op
 
 The high-performance discovery engine. Uses **Hybrid Search** (combining keyword and vector search) for ultra-relevant results.
 
-### 3.3 Object Storage (Google Cloud Storage)
+### 3.3 Object Storage & Content Delivery (GCS + Cloud CDN)
 
-* **Standard Class:** Watermarked previews and thumbnails for fast delivery.
-* **Coldline/Archive:** Original raw files to optimize costs.
+To balance performance with costs, we use a **Hot/Cold Storage** and **Just-in-Time Delivery** model:
+
+* **Hot Tier (Standard Class):** Immediate access for global metadata, trending assets, and active contributor submissions.
+* **Cold Tier (Archive/Coldline):** 90% of the repository (Original RAW files) is stored in low-cost archival tiers, saving ~90% on storage fees.
+* **Dynamic Imaging Engine (ImgIX-style):**
+  * **Architecture:** Instead of pre-storing millions of static thumbnails, a **Cloud Run** service resizes and watermarks images on-the-fly.
+  * **Edge Caching:** **Cloud CDN** caches these processed variants at the edge, ensuring sub-100ms delivery for recurring requests.
+  * **Benefit:** Dramatically reduces required storage capacity and ensures the fastest user experience globally.
 
 ---
 
