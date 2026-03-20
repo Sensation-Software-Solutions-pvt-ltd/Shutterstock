@@ -49,13 +49,13 @@ Instead of storing thousands of fixed-size thumbnails, we use an **ImgIX-like ar
 
 If the application is initially restricted to internal users for testing and a smaller initial asset library (e.g., 2TB), the starting costs are significantly lower:
 
-| Component | Minimum Monthly Cost | Setup |
-| :--- | :--- | :--- |
-| **Compute** | ~$20 – 50 | 1x Shared CPU Cloud Run instance |
-| **Database** | ~$15 – 30 | Small db-f1-micro or Cloud SQL instance |
-| **Storage (2TB)** | ~$10 – 40 | Standard storage with Wasabi or B2 (via GCS Interop) |
-| **AI (Embeddings)** | ~$10 – 20 | Pay-per-use Vertex AI API calls |
-| **TOTAL PILOT COST** | **~$55 – 140 / mo** | **$0 Upfront Investment** |
+| Component | Cloud Approach (GCP) | Rented Server (Local) | Hybrid (GCP + Remote Store) |
+| :--- | :--- | :--- | :--- |
+| **Compute / API** | ~$20 – 50 (Cloud Run) | ~$40 – 70 (Dedicated) | ~$20 – 50 (Cloud Run) |
+| **Database** | ~$15 – 30 (managed) | $0 (Self-hosted) | ~$15 – 30 (managed) |
+| **Storage (2TB)** | ~$10 – 40 (GCS/B2) | $0 (In-server) | ~$10 – 20 (External Box/S3) |
+| **AI (Embeddings)**| ~$10 – 20 (API) | $0 (Local GPU) | ~$10 – 20 (API) |
+| **EST. TOTAL** | **~$55 – 140 / mo** | **~$40 – 70 / mo** | **~$55 – 120 / mo** |
 
 ---
 
